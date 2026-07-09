@@ -8,9 +8,20 @@
 
 const http = require('http');
 const https = require('https');
+const url = require('url');
 const fs = require('fs');
 const path = require('path');
-const url = require('url');
+
+// ─── Zero-dependency .env loader ──────────────────────────────────────────────
+try {
+  const envFile = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
+  envFile.split('\n').forEach(line => {
+    const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+    if (match) process.env[match[1]] = match[2].trim();
+  });
+} catch (e) {
+  // Ignore if .env doesn't exist
+}
 
 const PORT = 3000;
 const HTML_FILE = path.join(__dirname, 'index.html');
@@ -79,9 +90,9 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // Allow apiUrl and apiKey to come from the client request body
+    // Allow apiUrl to come from client, fallback to default. Use apiKey from client, then .env.
     const targetUrl = payload.apiUrl || 'https://integrate.api.nvidia.com/v1/chat/completions';
-    const apiKey = payload.apiKey || '';
+    const apiKey = payload.apiKey || process.env.NVIDIA_API_KEY || '';
     const { apiUrl: _a, apiKey: _b, ...nvidiaPayload } = payload; // strip proxy-only fields
 
     const parsedTarget = url.parse(targetUrl);
